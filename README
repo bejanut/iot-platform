@@ -1,0 +1,118 @@
+
+    Pentru rezolvarea acestei teme am creat 6 metode expuse de server prin RPC
+acestea au fost:
+    * request_authorization
+    * approve_request_token
+    * request_access_token
+    * refresh_access_token
+    * validate_delegated_action
+    * stop_server
+................................................................................
+COMPILARE SI TESTARE
+
+    Pentru a compila sursele si a rula checker-ul este suficenta comanda make,
+care va face build pentru server si pentru client si dupa va porni checker-ul.
+    Pentru a efectu operatiile se poate folosi:
+* make build-server -> compilare server
+* make build-client -> compilare client
+* make run -> rulare checker
+* make clean -> sterge resursele care nu mai sunt necesare
+
+Modificarile aduse la checker au fost:
+* adaugarea de new line la expected output
+* stergerea cod-ului pentru distrugerea serverului, deoarece client-ul ii
+comunica serverului sa se inchida
+* adaugarea de fisiere noi date ca input server-ului in care este scrisa
+durata unui token de acces nou generat (valoare copiata din readme)
+
+................................................................................
+STRUCTURI UTILIZATE
+
+RPC
+
+Auth_Request: folosita pentru a aplea functia <request_access_token>
+Contine:
+- tokenul de request folosit pentru confimarea identitatii
+- un intreg care mentioneaza daca se solicita sau nu generarea tokenu-ului de
+refresh
+
+AuthResponse: folosita ca raspuns la cererea de autentificare sau de refresh
+Contine:
+- statusul cererii
+- tokenul de acces (empty string daca a intervenit vreo eroare)
+- tokenul de refresh (empty string daca a intervenit vreo eroare sau nu a fost
+solicitata generarea)
+
+Action_Request: folosita pentru a aplea functia <validate_delegated_action>
+Contine:
+- token-ul de acces
+- numele resursei
+- numele actiunii
+................................................................................
+SERVER
+
+    Pe server se utilizeaza un array de elemente de tip UserData
+care contin urmatoarele informatii:
+- user id-ul
+- ultimul requestToken generat de server pentru acel user 
+- ultimul accessToken generat de server pentru acel user
+- ultimul refreshToken generat de server pentru acel user 
+- un vector de intregi cu atatea elemente cate resurse exista si elementele lui
+marcheaza care sunt permisiunile unui user pe o anumita resursa (tipurile de
+permisiuni sunt salvate utilizand coduri binare)
+- cate utilizari mai are token-ul de acces pana cand va expira
+................................................................................
+CLIENT
+    Pentru client se utilizeaza un array de elemente de tip ClientData
+care contin urmatoarele informatii:
+- user id-ul
+- ultimul accessToken solicitat pentru acel user
+- ultimul refreshToken solicitat pentru acel user
+- cate utilizari mai are token-ul de acces pana cand va expira
+................................................................................
+METODE EXPUSE DE SERVER
+
+request_authorization:
+    Primeste id-ul userului si intoarce un token care va fi utilizat pentru a
+primi aprobarea de la userul final, sau se va intoarce un string empty daca
+utilizatorul nu exista.
+
+approve_request_token:
+    Primeste un request token generat de server si simuleaza actiuea unui user
+care trebuie sa accete request-ul si sa mentioneze ce resurse sunt atasate
+acestei cereri. In momentul in care este aprobata cererea si pe server sunt
+actualizate datele userului.
+
+request_access_token:
+    Primeste request token-ul generat anterior, si verifica daca a fost semnat
+de end-user. Dupa validate sunt create tokenul de acces si tokenul de refresh
+(daca a fost solititat acest lucru, daca nu, acesta va fi un string gol).
+Acesti tokeni alaturi de numarul de utilizari sunt returnate ca raspuns.
+
+refresh_access_token:
+    Functioneaza similar cu request_access_token, dar primeste doar un refresh
+token, pe care il verifica si in urma caruia emite un rapsuns similar cu cel al
+request_access_token. Aceasta metoda intoarce mereu si un refresh token si in
+cadrul rezolvarii aceasta metoda este apelata cand client-ul detine asociat unui
+user si un refresh token si realizeaza ca acces token-ul a expirat.
+
+validate_delegated_action:
+    Primeste un obiect de tip Action_Request si verifica care este userul
+asociat cu acces token-ul atasat. Daca user-ul exista, se verifica daca token-ul
+a expirat, iar apoi daca resursa exista. La final daca s-a trecut de toate
+aceste validari, actiunea este tradusa intr-un cod cu care sunt verificate
+permisiunile user-ului pentru acea actiune si se decide daca actiunea se
+aproba sau nu.
+
+stop_server:
+    Metoda folosita de client pentru a anunta serverul ca acesta a terminat
+interactiunea.
+................................................................................
+
+EXTRA
+    Celelate functii utilizate au fost foloiste fie pentru a manipula
+structurile utilizate, fie pentru a transalata diferite date dintr-un format in
+altul. De menitionat ar mai putea fi si functia "translateClientRequests" care
+este utilizata pentru a citi din fisier toate request-urile clientului si a
+asigura rezolarea lor prin comunicatia cu serverul.
+................................................................................
